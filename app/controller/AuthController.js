@@ -134,6 +134,14 @@ const login = async (req, res) => {
     });
   }
 };
+const home=(req,res)=>
+{
+  res.status(200).json({ 
+    status: true,
+    message: 200,
+    data: [],})
+}
 
 
-module.exports = { registration,login };
+
+module.exports = { registration,login,home };
