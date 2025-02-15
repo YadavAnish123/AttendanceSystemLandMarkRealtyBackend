@@ -1,9 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+JWT_SECRET_KEY='anish@123'
  
 const User = require('../model/UserModel'); // Import the Mongoose User model
-require('dotenv').config();
+//require('dotenv').config();
 const registration = async (req, res) => {
   let { name, email, password, phone } = req.body;
 
@@ -44,7 +45,7 @@ const registration = async (req, res) => {
     // Generate JWT Token
     const token = jwt.sign(
       { email: newUser.email },  // Use the email as the payload
-      process.env.JWT_SECRET_KEY,  // Your JWT secret key
+      JWT_SECRET_KEY,  // Your JWT secret key
       { expiresIn: "1h" }          // Optional: Set expiration time for the token
     );
 
@@ -108,7 +109,7 @@ const login = async (req, res) => {
     // Generate JWT Token
     const token = jwt.sign(
       { email: user.email },  // Use the email as the payload
-      process.env.JWT_SECRET_KEY,  // Your JWT secret key
+      JWT_SECRET_KEY,  // Your JWT secret key
       { expiresIn: "1h" }          // Optional: Set expiration time for the token
     );
 
