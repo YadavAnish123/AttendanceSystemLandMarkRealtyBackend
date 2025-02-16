@@ -49,7 +49,10 @@ const registration = async (req, res) => {
       { expiresIn: "1h" }          // Optional: Set expiration time for the token
     );
 
-    res.status(201).json({
+    res
+    .cookie("access_token",token,{httpOnly:true})
+    .status(201)
+    .json({
       status: true,
       message: "User created successfully",
       data: {
@@ -58,7 +61,7 @@ const registration = async (req, res) => {
           email: newUser.email,
           phone: newUser.phone
         },
-        token: token,  // Send the generated JWT token
+       
       },
     });
   } catch (e) {
@@ -113,7 +116,10 @@ const login = async (req, res) => {
       { expiresIn: "1h" }          // Optional: Set expiration time for the token
     );
 
-    res.status(200).json({
+    res
+    .cookie("access_token",token,{httpOnly:true})
+    .status(200)
+    .json({
       status: true,
       message: "Login successful",
       data: {
@@ -121,8 +127,7 @@ const login = async (req, res) => {
           name: user.name,
           email: user.email,
           phone: user.phone,
-        },
-        token: token,  // Send the generated JWT token
+        }
       },
     });
   } catch (e) {
