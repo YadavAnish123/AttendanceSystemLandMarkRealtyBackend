@@ -9,7 +9,7 @@ app.use(express.json());
 // Enable CORS
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow requests from frontend
+    origin: "https://landmarkrealty-attendance-system.netlify.app/", // Allow requests from frontend
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type,Authorization",
   })
