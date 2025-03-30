@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 JWT_SECRET_KEY='anish@123'
  
 const User = require('../model/UserModel'); // Import the Mongoose User model
+const Attendance = require('../model/AttendanceSchema'); // Import the Mongoose User model
+
 //require('dotenv').config();
 const registration = async (req, res) => {
   let { name, email, password, phone } = req.body;
@@ -143,63 +145,122 @@ const login = async (req, res) => {
   }
 };
 
+// Company Location (Replace with actual coordinates)
+//22.517227028497516, 88.29904037773575
+const COMPANY_LAT = 22.517227028497516; // Example Latitude
+const COMPANY_LON = 88.29904037773575; // Example Longitude
 
-// const makeAttendanceSystem = async (req, res) => {
-//   try {
-//     // Get user email from middleware (decoded token)
-//     const userEmail = req.user.email;
+// Haversine formula to calculate distance (in meters)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371000; // Earth's radius in meters
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
-//     // Find user in database
-//     const user = await User.findOne({ email: userEmail });
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-//     if (!user) {
-//       return res.status(404).json({
-//         status: false,
-//         message: "User not found",
-//         data: [],
-//       });
-//     }
-
-//     // Mark attendance
-//     // const attendance = new Attendance({
-//     //   userId: user._id,
-//     //   email: user.email,
-//     //   date: new Date(),
-//     //   status: "Present",
-//     // });
-
-//     // await attendance.save();
-
-//     return res.status(200).json({
-//       status: true,
-//       message: "Attendance marked successfully",
-//       data: {
-//         user: {
-//           name: user.name,
-//           email: user.email,
-//         },
-//       },
-//     });
-//   } catch (e) {
-//     console.error("Attendance error:", e.message);
-
-//     return res.status(500).json({
-//       status: false,
-//       message: "Server error. Please try again later.",
-//       data: [],
-//     });
-//   }
-// };
+  return R * c; // Distance in meters
+};
 
 
-const makeAttendanceSystem=(req,res)=>{
-  const token = req.cookies.access_token;
-    console.log(token)
-    res.status(200).json({ 
+
+// Mark Attendance
+const makeAttendanceSystem = async (req, res) => {
+  try {
+    // Get user email from decoded token (middleware)
+    const userEmail = req.user.email;
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        status: false,
+        message: "Location (latitude, longitude) is required",
+      });
+    }
+
+    // Find user in database
+    const user = await User.findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+    }
+
+    // Calculate distance from company location
+    const distance = calculateDistance(COMPANY_LAT, COMPANY_LON, latitude, longitude);
+
+    if (distance > 50) {
+      return res.status(403).json({
+        status: false,
+        message: "You are not within the 50-meter radius of the company",
+      });
+    }
+
+    // Get today's date
+    const today = new Date().toISOString().split("T")[0];
+
+    // Check if attendance already exists for today
+    let attendance = await Attendance.findOne({
+      userDetails: user._id,
+      date: today,
+    });
+
+    if (!attendance) {
+      // First check-in for the day
+      attendance = new Attendance({
+        userDetails: user._id,
+        date: today,
+        entries: [{ startTime: new Date(), location: { latitude, longitude } }],
+      });
+    } else {
+      // Update existing attendance (mark end time if last entry has no endTime)
+      const lastEntry = attendance.entries[attendance.entries.length - 1];
+
+      if (!lastEntry.endTime) {
+        lastEntry.endTime = new Date();
+      } else {
+        attendance.entries.push({ startTime: new Date(), location: { latitude, longitude } });
+      }
+    }
+
+    await attendance.save();
+    // Fetch the updated attendance with populated user details
+    const updatedAttendance = await Attendance.findById(attendance._id).populate(
+      "userDetails",
+      "name email phone"
+    );
+
+    return res.status(200).json({
       status: true,
-      message: 200,
-      data: [],})
-}
+      message: "Attendance marked successfully",
+      data: updatedAttendance,
+    });
+  } catch (error) {
+    console.error("Attendance error:", error.message);
+
+    return res.status(500).json({
+      status: false,
+      message: "Server error. Please try again later.",
+    });
+  }
+};
+
+// const makeAttendanceSystem=(req,res)=>{
+//   const token = req.cookies.access_token;
+//     console.log(token)
+//     res.status(200).json({ 
+//       status: true,
+//       message: 200,
+//       data: [],})
+// }
 
 
 const home=(req,res)=>

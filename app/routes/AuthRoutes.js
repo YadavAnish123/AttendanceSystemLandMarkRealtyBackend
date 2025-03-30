@@ -13,5 +13,5 @@ const {
 router.post("/register", registration); // Correct route
 router.post("/login", login); // Correct route
 router.get("/home", home); // Correct route
-router.post("/mark-attendance", makeAttendanceSystem);
+router.post("/mark-attendance",verifyLogin, makeAttendanceSystem);
 module.exports = router;
