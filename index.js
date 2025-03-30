@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = 3000;
+const cookieParser = require("cookie-parser");
 
 // Enable CORS with simplified configuration
 var corsOptions = {

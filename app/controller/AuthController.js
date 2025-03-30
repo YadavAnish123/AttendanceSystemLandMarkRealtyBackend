@@ -75,6 +75,8 @@ const registration = async (req, res) => {
   }
 };
 
+
+
 const login = async (req, res) => {
   let { email, password } = req.body;
 
@@ -140,6 +142,66 @@ const login = async (req, res) => {
     });
   }
 };
+
+
+// const makeAttendanceSystem = async (req, res) => {
+//   try {
+//     // Get user email from middleware (decoded token)
+//     const userEmail = req.user.email;
+
+//     // Find user in database
+//     const user = await User.findOne({ email: userEmail });
+
+//     if (!user) {
+//       return res.status(404).json({
+//         status: false,
+//         message: "User not found",
+//         data: [],
+//       });
+//     }
+
+//     // Mark attendance
+//     // const attendance = new Attendance({
+//     //   userId: user._id,
+//     //   email: user.email,
+//     //   date: new Date(),
+//     //   status: "Present",
+//     // });
+
+//     // await attendance.save();
+
+//     return res.status(200).json({
+//       status: true,
+//       message: "Attendance marked successfully",
+//       data: {
+//         user: {
+//           name: user.name,
+//           email: user.email,
+//         },
+//       },
+//     });
+//   } catch (e) {
+//     console.error("Attendance error:", e.message);
+
+//     return res.status(500).json({
+//       status: false,
+//       message: "Server error. Please try again later.",
+//       data: [],
+//     });
+//   }
+// };
+
+
+const makeAttendanceSystem=(req,res)=>{
+  const token = req.cookies.access_token;
+    console.log(token)
+    res.status(200).json({ 
+      status: true,
+      message: 200,
+      data: [],})
+}
+
+
 const home=(req,res)=>
 {
   res.status(200).json({ 
@@ -150,4 +212,4 @@ const home=(req,res)=>
 
 
 
-module.exports = { registration,login,home };
+module.exports = { registration,login,home,makeAttendanceSystem };
