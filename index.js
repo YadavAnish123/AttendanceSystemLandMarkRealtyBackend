@@ -3,14 +3,17 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = 3000;
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
+
+
 
 // Enable CORS with simplified configuration
 var corsOptions = {
   origin: "*", // Allow requests from any origin
-  optionsSuccessStatus: 200, // Successful response status
+  optionsSuccessStatus: 200, // Successful response status,
+ // credentials: true // Allow cookies to be sent
 };
+
+
 app.use(cors(corsOptions));
 
 app.use(express.json());
@@ -24,12 +27,16 @@ app.use("/api/v1/auth", authRoute);
 DBConn()
   .then(() => {
     app.listen(port, () => {
+     
       console.log(`Server running at http://localhost:${port}`);
     });
   })
   .catch((err) => {
     console.error("Error connecting to the database:", err);
-  });
+});
+
+
+
 
 /*const express = require("express");
 const cors = require("cors");

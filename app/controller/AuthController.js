@@ -1,8 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const moment = require('moment');
 const jwt = require('jsonwebtoken');
-JWT_SECRET_KEY='anish@123'
- 
+JWT_SECRET_KEY = 'anish@123'
+
 const User = require('../model/UserModel'); // Import the Mongoose User model
 const Attendance = require('../model/AttendanceSchema'); // Import the Mongoose User model
 
@@ -19,8 +20,8 @@ const registration = async (req, res) => {
   }
   try {
     // Check if the user already exists based on email
-    const userExists = await User.findOne({ email:email });
-    
+    const userExists = await User.findOne({ email: email });
+
     if (userExists) {
       // If user exists, send a message indicating that the email already exists
       return res.status(400).json({
@@ -52,20 +53,20 @@ const registration = async (req, res) => {
     );
 
     res
-    .cookie("access_token",token,{httpOnly:true})
-    .status(201)
-    .json({
-      status: true,
-      message: "User created successfully",
-      data: {
-        user: {
-          name: newUser.name,
-          email: newUser.email,
-          phone: newUser.phone
+      .cookie("access_token", token, { httpOnly: true })
+      .status(201)
+      .json({
+        status: true,
+        message: "User created successfully",
+        data: {
+          user: {
+            name: newUser.name,
+            email: newUser.email,
+            phone: newUser.phone
+          },
+
         },
-       
-      },
-    });
+      });
   } catch (e) {
     console.error("Database error:", e.message);  // Log error for debugging
 
@@ -76,6 +77,29 @@ const registration = async (req, res) => {
     });
   }
 };
+
+const getlastcheckInTimeANDlastcheckOutTime=(data)=>
+{
+  let lastCheckIn;
+  let lastCheckOut;
+  data.forEach((row)=>{
+  if (!row.entries || row.entries.length === 0) {
+    return { lastCheckIn: null, lastCheckOut: null };
+  }
+
+  // Find the last check-in (latest startTime)
+   lastCheckIn = row.entries.reduce((latest, entry) =>
+    entry.startTime > latest.startTime ? entry : latest
+  );
+
+  // Find the last check-out (latest endTime)
+  lastCheckOut = row.entries.reduce((latest, entry) =>
+    entry.endTime > latest.endTime ? entry : latest
+  );
+})
+
+  return { lastCheckIn: moment(lastCheckIn.startTime).format('YYYY-MM-DD HH:mm:ss'), lastCheckOut: moment(lastCheckOut.endTime).format('YYYY-MM-DD HH:mm:ss') };
+}
 
 
 
@@ -117,23 +141,37 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { email: user.email },  // Use the email as the payload
       JWT_SECRET_KEY,  // Your JWT secret key
-      { expiresIn: "1h" }          // Optional: Set expiration time for the token
+      // { expiresIn: "1h" }          // Optional: Set expiration time for the token
     );
 
+
+    //get lastchekInTime and lastcheckOutTime
+
+
+    let attendenceData = await Attendance.find({ userDetails: user._id })
+    let laststatus=getlastcheckInTimeANDlastcheckOutTime(attendenceData)
+    
+
+    
+
     res
-    .cookie("access_token",token,{httpOnly:true})
-    .status(200)
-    .json({
-      status: true,
-      message: "Login successful",
-      data: {
-        user: {
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-        }
-      },
-    });
+      //.cookie("access_token",token,{httpOnly:true})
+      .status(200)
+      .json({
+        status: true,
+        message: "Login successful",
+        data: {
+          user: {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            token: token,
+            lastcheckInTime:laststatus.lastCheckIn,
+            lastcheckOutTime:laststatus.lastCheckOut
+
+          }
+        },
+      });
   } catch (e) {
     console.error("Login error:", e.message);
 
@@ -160,9 +198,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in meters
@@ -197,7 +235,7 @@ const makeAttendanceSystem = async (req, res) => {
     // Calculate distance from company location
     const distance = calculateDistance(COMPANY_LAT, COMPANY_LON, latitude, longitude);
 
-    if (distance > 50) {
+    if (distance > 500) {
       return res.status(403).json({
         status: false,
         message: "You are not within the 50-meter radius of the company",
@@ -205,7 +243,8 @@ const makeAttendanceSystem = async (req, res) => {
     }
 
     // Get today's date
-    const today = new Date().toISOString().split("T")[0];
+    const today = moment(new Date()).format('YYYY-MM-DD');
+    
 
     // Check if attendance already exists for today
     let attendance = await Attendance.findOne({
@@ -218,16 +257,16 @@ const makeAttendanceSystem = async (req, res) => {
       attendance = new Attendance({
         userDetails: user._id,
         date: today,
-        entries: [{ startTime: new Date(), location: { latitude, longitude } }],
+        entries: [{ startTime:  moment(new Date()).format('YYYY-MM-DD HH:mm:ss'), location: { latitude, longitude } }],
       });
     } else {
       // Update existing attendance (mark end time if last entry has no endTime)
       const lastEntry = attendance.entries[attendance.entries.length - 1];
 
       if (!lastEntry.endTime) {
-        lastEntry.endTime = new Date();
+        lastEntry.endTime = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
       } else {
-        attendance.entries.push({ startTime: new Date(), location: { latitude, longitude } });
+        attendance.entries.push({ startTime:moment(new Date()).format('YYYY-MM-DD HH:mm:ss'), location: { latitude, longitude } });
       }
     }
 
@@ -237,11 +276,16 @@ const makeAttendanceSystem = async (req, res) => {
       "userDetails",
       "name email phone"
     );
+  let d=[]
+  d.push(updatedAttendance)
+  let laststatus= getlastcheckInTimeANDlastcheckOutTime(d)
+
+  
 
     return res.status(200).json({
       status: true,
       message: "Attendance marked successfully",
-      data: updatedAttendance,
+      data: {user:{lastcheckInTime:laststatus.lastCheckIn,lastcheckOutTime:laststatus.lastCheckOut}},
     });
   } catch (error) {
     console.error("Attendance error:", error.message);
@@ -253,24 +297,17 @@ const makeAttendanceSystem = async (req, res) => {
   }
 };
 
-// const makeAttendanceSystem=(req,res)=>{
-//   const token = req.cookies.access_token;
-//     console.log(token)
-//     res.status(200).json({ 
-//       status: true,
-//       message: 200,
-//       data: [],})
-// }
 
 
-const home=(req,res)=>
-{
-  res.status(200).json({ 
+
+const home = (req, res) => {
+  res.status(200).json({
     status: true,
     message: 200,
-    data: [],})
+    data: [],
+  })
 }
 
 
 
-module.exports = { registration,login,home,makeAttendanceSystem };
+module.exports = { registration, login, home, makeAttendanceSystem };

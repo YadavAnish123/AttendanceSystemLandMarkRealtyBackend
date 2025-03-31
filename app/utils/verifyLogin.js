@@ -6,7 +6,7 @@ JWT_SECRET_KEY='anish@123'
 const verifyLogin = (req, res, next) => {
   try {
     // Extract token from cookies
-    const token = req.cookies.access_token;
+    const token =req.headers.authorization;// req.cookies.access_token;
    
 
     if (!token) {
